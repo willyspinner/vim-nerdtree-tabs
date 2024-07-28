@@ -334,12 +334,31 @@ endfun
 "
 " Close all open buffers on entering a window if the only
 " buffer that's left is the NERDTree buffer
+"fun! s:CloseIfOnlyNerdTreeLeft()
+" if exists("t:NERDTreeBufName") && bufwinnr(t:NERDTreeBufName) != -1 && winnr("$") == 1
+"     q
+"   endif
+" endfun
+"
+"
+"
+" WILLYNOTE: ^ above is buggy. Fixed with this workaround beloew:
+" https://github.com/jistr/vim-nerdtree-tabs/issues/102#issuecomment-1437948083
 fun! s:CloseIfOnlyNerdTreeLeft()
   if exists("t:NERDTreeBufName") && bufwinnr(t:NERDTreeBufName) != -1 && winnr("$") == 1
-    q
+    if has('patch-9.0.907')
+      " Vim forbids closing the window inside an autocommand
+      " Ref: https://groups.google.com/g/vim_dev/c/Cw8McBH6DDM?pli=1
+      " So let's do it afterwards. Solution came from @mattmartini
+      " Ref: https://github.com/jistr/vim-nerdtree-tabs/issues/102
+      call timer_start(1, {-> execute('q', 'silent!') }) " close buffer after we exit autocmd
+      call timer_start(100, {-> execute('vertical resize 31', 'silent!') }) " window sizing is goofed up, so fix it
+      call timer_start(250, {-> execute('wincmd w', 'silent!') }) " shift focus from NerdTree window to buffer window
+    else
+      q
+    endif
   endif
 endfun
-
 " }}}
 " s:IsCurrentWindowNERDTree() {{{
 "
